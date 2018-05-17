@@ -69,6 +69,7 @@ def signup():
 
 @socketio.on('signup', namespace='/chat')
 def chat_signup(data):
+    data = data['data']
     hashed_password = generate_password_hash(data['password'], method='sha256')
     try:
         user = mongo.db.users.find_one({'login': data['login']})
@@ -103,6 +104,9 @@ def chat_connect(data):
         join_room(user['login'])
         mongo.db.users.update_one({'login': user['login']}, {'$set': {'online': True}})
         emit('login', {'message': None, 'data': {'token': token.decode('UTF-8')}, 'status': 'success'})
+    else:
+        emit('login', {'message': 'Password or user is invalid', 'data': None, 'status': 'error'})
+
 
 
 @socketio.on('disconnect', namespace='/chat')

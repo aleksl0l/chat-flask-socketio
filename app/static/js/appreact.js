@@ -108,6 +108,7 @@ class Auth extends React.Component {
         );
     }
     handleSignUpStatus(data) {
+        console.log("sign up");
         if (data.status === "error") {
             this.setState({message: data.message});
         }
@@ -117,6 +118,7 @@ class Auth extends React.Component {
     }
     handleSignInStatus(data) {
         if (data.status === "error") {
+            console.log("sign in");
             this.setState({message: data.message});
         }
         else {
