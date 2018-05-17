@@ -122,13 +122,12 @@ def get_available_users():
 
 @socketio.on('message', namespace='/chat')
 def chat_message(message):
-    print(message['message'])
     emit('message',
          {
              'message': None,
              'data':
                  {
-                     'message': message['message'],
+                     'message': message['message'].encode('latin-1').decode('utf-8'),
                      'from': session['login']
                  },
              'status': 'success'
