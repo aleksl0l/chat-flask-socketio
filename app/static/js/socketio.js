@@ -4,11 +4,12 @@ $(document).ready(function() {
             // Socket.IO will multiplex all those connections on a single
             // physical channel. If you don't care about multiple channels, you
             // can set the namespace to an empty string.
-            namespace = '/test';
+            namespace = '/chat';
             // Connect to the Socket.IO server.
             // The connection URL has the following format:
             //     http[s]://<domain>:<port>[/<namespace>]
             var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+            console.log(location.protocol + '//' + document.domain + ':' + location.port + namespace);
             // Event handler for new connections.
             // The callback function is invoked when a connection with the
             // server is established.
@@ -32,7 +33,7 @@ $(document).ready(function() {
             });
 
             socket.on('message', function(msg) {
-                $('#log').append('<br>' + $('<div/>').text('Message from ' + msg['from'] + ': ' + msg['message']).html());
+                $('#log').append('<br>' + $('<div/>').text('Message from ' + msg['data']['from'] + ': ' + msg['data']['message']).html());
             });
 
 
@@ -47,13 +48,17 @@ $(document).ready(function() {
             });
 
             $('form#message').submit(function(event) {
-                socket.emit('message', {'to': $('#to').val(), 'message': $('#text').val()});
+                var to = $('#to').val();
+                var msg = $('#text').val();
+                $('#log').append('<br>' + $('<div/>').text('Message to ' + to + ': ' + msg).html());
+                socket.emit('message', {'to': to, 'message': msg});
                 return false;
             });
 
-
-
-
+            $('form#disconnect').submit(function(event) {
+                socket.emit('disconnect_request');
+                return false;
+            });
             // Interval function that tests message latency by sending a "ping"
             // message. The server then responds with a "pong" message and the
             // round trip time is measured.
@@ -74,35 +79,5 @@ $(document).ready(function() {
                 for (var i = 0; i < ping_pong_times.length; i++)
                     sum += ping_pong_times[i];
                 $('#ping-pong').text(Math.round(10 * sum / ping_pong_times.length) / 10);
-            });
-            // Handlers for the different forms in the page.
-            // These accept data from the user and send it to the server in a
-            // variety of ways
-
-
-
-            $('form#broadcast').submit(function(event) {
-                socket.emit('my_broadcast_event', {data: $('#broadcast_data').val()});
-                return false;
-            });
-            $('form#join').submit(function(event) {
-                socket.emit('join', {room: $('#join_room').val()});
-                return false;
-            });
-            $('form#leave').submit(function(event) {
-                socket.emit('leave', {room: $('#leave_room').val()});
-                return false;
-            });
-            $('form#send_room').submit(function(event) {
-                socket.emit('my_room_event', {room: $('#room_name').val(), data: $('#room_data').val()});
-                return false;
-            });
-            $('form#close').submit(function(event) {
-                socket.emit('close_room', {room: $('#close_room').val()});
-                return false;
-            });
-            $('form#disconnect').submit(function(event) {
-                socket.emit('disconnect_request');
-                return false;
             });
         });
