@@ -53,7 +53,7 @@ def signup():
     data = request.args.to_dict(flat=True)
     hashed_password = generate_password_hash(data['password'], method='sha256')
     try:
-        user = mongo.db.users.find_ont({'login': data['login']})
+        user = mongo.db.users.find_one({'login': data['login']})
         if user:
             return jsonify({'message': 'This login is already exist', 'data': None, 'status': 'error'})
         mongo.db.users.insert({'public_id': str(uuid.uuid4()),
@@ -63,6 +63,7 @@ def signup():
                                'date': datetime.datetime.utcnow()})
         return jsonify({'message': None, 'data': None, 'status': 'success'})
     except Exception as e:
+        print(e)
         return jsonify({'message': 'Unexpected error', 'data': None, 'status': 'error'})
 
 
@@ -70,7 +71,7 @@ def signup():
 def chat_signup(data):
     hashed_password = generate_password_hash(data['password'], method='sha256')
     try:
-        user = mongo.db.users.find_ont({'login': data['login']})
+        user = mongo.db.users.find_one({'login': data['login']})
         if user:
             emit('signup_status', {'message': 'This login is already exist', 'data': None, 'status': 'error'})
         mongo.db.users.insert({'public_id': str(uuid.uuid4()),
