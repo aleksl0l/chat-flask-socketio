@@ -1,21 +1,22 @@
 var socket = io('http://127.0.01:5000/chat');
+socket.open();
+
+// class Chat extends React.Component {
+//
+// }
 
 class Contacts extends React.Component {
     constructor(props, context) {
         super(props, context);
         this.state = {
-            text: "",
-            current_user: "",
             users: [],
             messages: {}
         };
         this.handleSubmit = this.handleSubmit.bind(this);
-        this.handleKeyPress = this.handleKeyPress.bind(this);
         Contacts.handleFocus = Contacts.handleFocus.bind(this);
     }
 
     componentDidMount() {
-        // socket = io('http://127.0.01:5000/chat');
 
         socket.on(
             'users',
@@ -23,8 +24,6 @@ class Contacts extends React.Component {
                 this.updateUsers(data);
             }
         );
-
-        socket.open();
         this.handleSubmit();
         setInterval(this.handleSubmit, 1000);
     }
@@ -41,41 +40,137 @@ class Contacts extends React.Component {
     static handleFocus(event) {
         console.log(event);
         console.log(event.target.innerText);
-        this.setState({current_user: event.target.innerText});
+        MessagesList.setCurrentUser(event.target.innerText);
         return false;
+    }
+
+    render() {
+        return <div id="sidepanel">
+        <div id="contacts">
+                <ul>
+                    {this.state.users.map(function (el) {
+                        return <li className="contact" key={el} onClick={Contacts.handleFocus}>
+                                <div className="wrap">
+                                    <span className="contact-status online" />
+                                    <img src="https://pp.userapi.com/c847021/v847021314/3ee09/zDgSsmKhxbo.jpg" alt />
+                                    <div className="meta">
+                                        <p className="name">{el}</p>
+                                    </div>
+                                </div>
+                        </li>;
+                    })}
+                </ul>
+        </div>
+        </div>;
+    }
+}
+
+
+class Message extends React.Component {
+    constructor(props, context) {
+        super(props, context);
+    }
+        render() {
+        if (this.props.to_me === true) {
+            return <li className="replies">
+                {this.props.text}
+            </li>;
+        }
+        else
+        {
+            return <li className="sent">
+                {this.props.text}
+            </li>;
+        }
+    }
+}
+
+class MessagesList extends  React.Component {
+    constructor(props, context) {
+        super(props, context);
+        this.state = {
+            text: "",
+            current_user: "",
+            messages: {'123': [{to_me: true, text: 'First Message'}, {to_me:false, text:'Second'}], "": []}
+        };
+        MessagesList.setCurrentUser = MessagesList.setCurrentUser.bind(this);
+        this.handleKeyPress = this.handleKeyPress.bind(this);
+    }
+
+    componentDidMount() {
+
+        socket.on(
+            'message',
+            data => {
+                this.handleMessage(data);
+            }
+        );
+    }
+
+    handleMessage(data) {
+        let messagesl = this.state.messages;
+        if (data.data.from in messagesl) {
+            messagesl[data.data.from].push({'to_me': true, 'text': data.data.message});
+        }
+        else {
+            messagesl[data.data.from] = [{'to_me': true, 'text': data.data.message}];
+        }
+        this.setState({messages: messagesl});
+    }
+
+    static setCurrentUser(user) {
+        console.log("setCurrentUser");
+        this.setState({current_user: user});
+        if (!(user in this.state.messages))
+        {
+            let messagesl = this.state.messages;
+            messagesl[user] = [];
+            this.setState({messages: messagesl});
+        }
     }
 
     handleKeyPress(event) {
         if (event.key === 'Enter' && this.state.current_user !== "") {
             socket.emit('message', {'to': this.state.current_user, 'message': event.target.value});
-            this.setState({text: ""});
+
+            let messagesl = this.state.messages;
+            messagesl[this.state.current_user].push({to_me: false, text: event.target.value});
+            this.setState({messages: messagesl});
+
+            this.refs.messageinput.value = "";
             console.log(event.target.value);
         }
     }
 
     render() {
-        return (
-            <div>
-                <div className="leftcontacts">
-                    <ul>
-                        <span>Available users</span>
-                        {this.state.users.map(function (el) {
-                            return <li key={el}>
-                                <a href="#" onClick={Contacts.handleFocus}> {el}</a>
-                            </li>;
-                        })}
-                    </ul>
-                </div>
-                <div className="rightcontacts">
-                    <div>
-                        <span>Chat with {this.state.current_user}</span>
-                        <input className="search-field" type="text" placeholder="Write a message" value={this.state.text} onKeyPress={this.handleKeyPress}/>
-                    </div>
-                </div>
+        return <div className="content">
+            <div className="contact-profile">
+                <img src="https://pp.userapi.com/c637927/v637927052/2894f/6zuAtDAetX4.jpg" alt="" />
+                <p>Chat with {this.state.current_user}</p>
             </div>
-        );
+            <div className="messages">
+                <ul>
+                    {
+                            this.state.messages[this.state.current_user].map(function (el) {
+                            return <Message to_me={el.to_me} text={el.text}/>;
+                            })
+                    }
+                </ul>
+            </div>
+            <div className="message-input">
+                <div className="wrap">
+                                    <input className="search-field" type="text" placeholder="Write a message" ref='messageinput'
+                       onKeyPress={this.handleKeyPress}/>
+                        <button className="submit"><i className="fa fa-paper-plane" aria-hidden="true"/></button>
+                </div>
+
+            </div>
+        </div>;
     }
+
 }
+
+
 
 
 class Auth extends React.Component {
@@ -171,6 +266,7 @@ ReactDOM.render(
     <div>
         <Auth />
         <Contacts />
+        <MessagesList id="contacts" />
     </div>,
-    document.getElementById('chat')
+    document.getElementById('frame')
 );
