@@ -16,7 +16,7 @@ body {
 
 #frame {
     width: 95%;
-    min-width: 360px;
+    min-width: 760px;
     max-width: 1000px;
     height: 92vh;
     min-height: 300px;
@@ -416,7 +416,7 @@ body {
 
 #frame #sidepanel #contacts ul li.contact {
     position: relative;
-    padding: 10px 0 15px 0;
+    padding: 10px 0 29px 0;
     font-size: 0.9em;
     cursor: pointer;
 }
@@ -604,7 +604,7 @@ body {
 
 @media screen and (min-width: 900px) {
     #frame .content {
-        width: calc(100% - 340px);
+        width: calc(100% - 304px);
     }
 }
 

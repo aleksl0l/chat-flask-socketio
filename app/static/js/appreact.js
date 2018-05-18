@@ -4,7 +4,32 @@ socket.open();
 // class Chat extends React.Component {
 //
 // }
+class Contact extends  React.Component {
+    constructor(props, context) {
+        super(props, context);
+        Contact.handleFocus = Contact.handleFocus.bind(this);
+    }
 
+    static handleFocus(event) {
+        // console.log("focus", event.target.getElementsByTagName('p')['0'].innerText);
+        // console.log("focus");
+        MessagesList.setCurrentUser(event.target.textContent);
+        return false;
+    }
+
+
+    render() {
+        return <li className="contact" onClick={Contact.handleFocus} >
+            <div className="wrap">
+                <span className="contact-status online"/>
+                <img src="https://pp.userapi.com/c847021/v847021314/3ee09/zDgSsmKhxbo.jpg" alt/>
+                <div className="meta">
+                    <p login={this.props.login} className="name">{this.props.login}</p>
+                </div>
+            </div>
+        </li>;
+    }
+}
 class Contacts extends React.Component {
     constructor(props, context) {
         super(props, context);
@@ -13,7 +38,6 @@ class Contacts extends React.Component {
             messages: {}
         };
         this.handleSubmit = this.handleSubmit.bind(this);
-        Contacts.handleFocus = Contacts.handleFocus.bind(this);
     }
 
     componentDidMount() {
@@ -37,30 +61,15 @@ class Contacts extends React.Component {
         return false;
     }
 
-    static handleFocus(event) {
-        console.log(event);
-        console.log(event.target.innerText);
-        MessagesList.setCurrentUser(event.target.innerText);
-        return false;
-    }
-
     render() {
         return <div id="sidepanel">
-        <div id="contacts">
+            <div id="contacts">
                 <ul>
                     {this.state.users.map(function (el) {
-                        return <li className="contact" key={el} onClick={Contacts.handleFocus}>
-                                <div className="wrap">
-                                    <span className="contact-status online" />
-                                    <img src="https://pp.userapi.com/c847021/v847021314/3ee09/zDgSsmKhxbo.jpg" alt />
-                                    <div className="meta">
-                                        <p className="name">{el}</p>
-                                    </div>
-                                </div>
-                        </li>;
+                        return <Contact key={el} login={el}/>;
                     })}
                 </ul>
-        </div>
+            </div>
         </div>;
     }
 }
@@ -70,16 +79,16 @@ class Message extends React.Component {
     constructor(props, context) {
         super(props, context);
     }
-        render() {
+    render() {
         if (this.props.to_me === true) {
             return <li className="replies">
-                {this.props.text}
+                <p>{this.props.text}</p>
             </li>;
         }
         else
         {
             return <li className="sent">
-                {this.props.text}
+                <p>{this.props.text}</p>
             </li>;
         }
     }
@@ -90,8 +99,8 @@ class MessagesList extends  React.Component {
         super(props, context);
         this.state = {
             text: "",
-            current_user: "",
-            messages: {'123': [{to_me: true, text: 'First Message'}, {to_me:false, text:'Second'}], "": []}
+            current_user: "def",
+            messages: {"def": []}//{"123": [{id: 1, to_me: true, text: 'First Message'}, {id: 2, to_me:false, text:'Second'}], "def": []}
         };
         MessagesList.setCurrentUser = MessagesList.setCurrentUser.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
@@ -108,23 +117,34 @@ class MessagesList extends  React.Component {
     }
 
     handleMessage(data) {
+        console.log('There is a message!', data.data);
         let messagesl = this.state.messages;
-        if (data.data.from in messagesl) {
-            messagesl[data.data.from].push({'to_me': true, 'text': data.data.message});
+        if ('from' in data.data) {
+            if (data.data.from in messagesl) {
+                messagesl[data.data.from].push({'to_me': true, 'text': data.data.message, 'id': data.data.id});
+            }
+            else {
+                messagesl[data.data.from] = [{'to_me': true, 'text': data.data.message, 'id': data.data.id}];
+            }
+            this.setState({messages: messagesl});
         }
-        else {
-            messagesl[data.data.from] = [{'to_me': true, 'text': data.data.message}];
+        else
+        {
+            console.log("test1", messagesl, data);
+            messagesl[data.data.to].push({'to_me': false, 'text': data.data.message, 'id': data.data.id});
+            this.setState({messages: messagesl});
         }
-        this.setState({messages: messagesl});
     }
 
     static setCurrentUser(user) {
-        console.log("setCurrentUser");
+        console.log(user, this.state.messages[user]);
+        // console.log(this.state.messages);
         this.setState({current_user: user});
         if (!(user in this.state.messages))
         {
             let messagesl = this.state.messages;
             messagesl[user] = [];
+            console.log(messagesl);
             this.setState({messages: messagesl});
         }
     }
@@ -133,9 +153,9 @@ class MessagesList extends  React.Component {
         if (event.key === 'Enter' && this.state.current_user !== "") {
             socket.emit('message', {'to': this.state.current_user, 'message': event.target.value});
 
-            let messagesl = this.state.messages;
-            messagesl[this.state.current_user].push({to_me: false, text: event.target.value});
-            this.setState({messages: messagesl});
+            // let messagesl = this.state.messages;
+            // messagesl[this.state.current_user].push({to_me: false, text: event.target.value});
+            // this.setState({messages: messagesl});
 
             this.refs.messageinput.value = "";
             console.log(event.target.value);
@@ -151,17 +171,17 @@ class MessagesList extends  React.Component {
             <div className="messages">
                 <ul>
                     {
-                            this.state.messages[this.state.current_user].map(function (el) {
-                            return <Message to_me={el.to_me} text={el.text}/>;
-                            })
+                        this.state.messages[this.state.current_user].map(function (el) {
+                            return <Message key={el.id} to_me={el.to_me} text={el.text}/>;
+                        })
                     }
                 </ul>
             </div>
             <div className="message-input">
                 <div className="wrap">
-                                    <input className="search-field" type="text" placeholder="Write a message" ref='messageinput'
-                       onKeyPress={this.handleKeyPress}/>
-                        <button className="submit"><i className="fa fa-paper-plane" aria-hidden="true"/></button>
+                    <input className="search-field" type="text" placeholder="Write a message" ref='messageinput'
+                           onKeyPress={this.handleKeyPress}/>
+                    <button className="submit"><i className="fa fa-paper-plane" aria-hidden="true"/></button>
                 </div>
 
             </div>
@@ -263,10 +283,10 @@ class Auth extends React.Component {
 
 
 ReactDOM.render(
-    <div>
+    <div id="frame">
         <Auth />
         <Contacts />
-        <MessagesList id="contacts" />
+        <MessagesList />
     </div>,
-    document.getElementById('frame')
+    document.getElementById('chat')
 );

@@ -38,6 +38,12 @@ thread_lock = Lock()
 #                       namespace='/chat')
 
 
+
+@app.before_first_request
+def activate_job():
+    print("Hey")
+    mongo.db.users.update_many({}, {'$set': {'online': False}})
+
 @app.route('/')
 def index():
     return app.send_static_file('index_chat.html')
@@ -119,6 +125,8 @@ def chat_disconnect():
 @socketio.on('get_available_users', namespace='/chat')
 def get_available_users():
     users = mongo.db.users.find({'online': True})
+    if 'login' in session:
+        mongo.db.users.update_one({'login': session['login']}, {'$set': {'online': True}})
     users_list = []
     for user in users:
         users_list.append(user['login'])
@@ -127,16 +135,31 @@ def get_available_users():
 
 @socketio.on('message', namespace='/chat')
 def chat_message(message):
+    print(message)
+    if 'login' in session:
+        mongo.db.users.update_one({'login': session['login']}, {'$set': {'online': True}})
     emit('message',
          {
              'message': None,
              'data':
                  {
                      'message': message['message'].encode('latin-1').decode('utf-8'),
-                     'from': session['login']
+                     'from': session['login'],
+                     'id': str(uuid.uuid4())
                  },
              'status': 'success'
          }, room=message['to'])
+    emit('message',
+         {
+             'message': None,
+             'data':
+                 {
+                     'message': message['message'].encode('latin-1').decode('utf-8'),
+                     'to': message['to'],
+                     'id': str(uuid.uuid4())
+                 },
+             'status': 'success'
+         })
 
 
 # @socketio.on('my_broadcast_event', namespace='/chat')
@@ -193,8 +216,7 @@ def ping_pong():
     emit('my_pong')
 
 
-
-
-
 if __name__ == '__main__':
+    with app.app_context():
+        mongo.db.users.update_many({}, {'$set': {'online': False}})
     socketio.run(app, debug=True)
