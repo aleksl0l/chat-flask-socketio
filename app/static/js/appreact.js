@@ -4,25 +4,23 @@ socket.open();
 // class Chat extends React.Component {
 //
 // }
-class Contact extends  React.Component {
+class Contact extends React.Component {
     constructor(props, context) {
         super(props, context);
         Contact.handleFocus = Contact.handleFocus.bind(this);
     }
 
     static handleFocus(event) {
-
         MessagesList.setCurrentUser(event.target.textContent);
         Contacts.setCurrentUser(event.target.textContent);
         return false;
     }
 
-
     render() {
         return <li className={this.props.isActive ? "contact active" : "contact"} onClick={Contact.handleFocus} >
             <div className="wrap">
                 <span className="contact-status online"/>
-                <img src="https://pp.userapi.com/c847021/v847021314/3ee09/zDgSsmKhxbo.jpg" alt/>
+                <img src="https://grand-vet.ru/wp-content/uploads/2017/11/default-avatar-250x250.png" alt/>
                 <div className="meta">
                     <p login={this.props.login} className="name">{this.props.login}</p>
                 </div>
@@ -30,6 +28,8 @@ class Contact extends  React.Component {
         </li>;
     }
 }
+
+
 class Contacts extends React.Component {
     constructor(props, context) {
         super(props, context);
@@ -105,6 +105,7 @@ class Message extends React.Component {
     }
 }
 
+
 class MessagesList extends  React.Component {
     constructor(props, context) {
         super(props, context);
@@ -126,6 +127,20 @@ class MessagesList extends  React.Component {
                 this.handleMessage(data);
             }
         );
+
+        socket.on(
+            'get_history',
+            data => {
+                this.handleGetHistory(data);
+            }
+        );
+    }
+
+    handleGetHistory(data) {
+        let messagesl = this.state.messages;
+        console.log('histro', data.data.messages);
+        messagesl[data.data.with_login].push(...data.data.messages);
+        this.setState({messages: messagesl});
     }
 
     handleMessage(data) {
@@ -150,14 +165,13 @@ class MessagesList extends  React.Component {
 
     static setCurrentUser(user) {
         console.log(user, this.state.messages[user]);
-        // console.log(this.state.messages);
         this.setState({current_user: user});
-        if (!(user in this.state.messages))
-        {
+        if (!(user in this.state.messages)) {
             let messagesl = this.state.messages;
             messagesl[user] = [];
             console.log(messagesl);
             this.setState({messages: messagesl});
+            socket.emit('get_history', {'with_login': user});
         }
     }
 
@@ -179,7 +193,7 @@ class MessagesList extends  React.Component {
     render() {
         return <div className="content">
             <div className="contact-profile">
-                <img src="https://pp.userapi.com/c637927/v637927052/2894f/6zuAtDAetX4.jpg" alt="" />
+                <img src="https://grand-vet.ru/wp-content/uploads/2017/11/default-avatar-250x250.png" alt="" />
                 <p>Chat with {this.state.current_user}</p>
             </div>
             <div className="messages">
@@ -203,8 +217,6 @@ class MessagesList extends  React.Component {
     }
 
 }
-
-
 
 
 class Auth extends React.Component {

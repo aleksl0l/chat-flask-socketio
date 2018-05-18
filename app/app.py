@@ -1,10 +1,8 @@
 import datetime
 import re
 import uuid
-from threading import Lock
-
 from flask import Flask, session, request, jsonify
-from flask_socketio import SocketIO, emit, join_room, disconnect
+from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_pymongo import PyMongo
 import jwt
@@ -15,14 +13,6 @@ app = Flask(__name__, static_url_path='')
 app.config.from_pyfile('config.py')
 mongo = PyMongo(app)
 socketio = SocketIO(app, async_mode=async_mode)
-thread = None
-thread_lock = Lock()
-
-
-@app.before_first_request
-def activate_job():
-    print("Hey")
-    mongo.db.users.update_many({}, {'$set': {'online': False}})
 
 
 @app.route('/')
@@ -52,7 +42,10 @@ def signup():
 @socketio.on('signup', namespace='/chat')
 def chat_signup(data):
     data = data['data']
-    print(data['login'])
+    print(data['login'], len(data['login']))
+    if len(data['login']) < 5:
+        emit('signup_status', {'message': 'Minimum length of login is 5', 'data': None, 'status': 'error'})
+        return
     if not bool(re.match(r'^[a-zA-Z0-9_]{5,}$', data['login'])):
         emit('signup_status',
              {'message': 'You must use only letters, digits and \'_\'', 'data': None, 'status': 'error'}
@@ -77,8 +70,6 @@ def chat_signup(data):
 def chat_connect(data):
     data = data['data']
     user = mongo.db.users.find_one({'login': data['login']})
-    print(user)
-
     if not user:
         emit('login', {'message': 'Password or user is invalid', 'data': None, 'status': 'error'})
         return
@@ -109,27 +100,70 @@ def get_available_users():
     if 'login' in session:
         mongo.db.users.update_one({'login': session['login']}, {'$set': {'online': True}})
     users_list = []
-    for user in users:
-        users_list.append(user['login'])
-    emit('users', {'message': None, 'data': {'users': users_list, 'status': 'success'}})
+    for u in users:
+        users_list.append(u['login'])
+    emit('users', {'message': None, 'data': {'users': users_list}, 'status': 'success'})
+
+
+@socketio.on('get_history', namespace='/chat')
+def get_history(data):
+    if 'login' in session and 'with_login' in data:
+        login = session['login']
+        with_login = data['with_login']
+
+        if login != with_login:
+            conversation = mongo.db.convertations.find_one({'members': {'$all': [login, with_login]}})
+        else:
+            conversation = mongo.db.convertations.find_one({'members': [login, with_login]})
+        if not conversation:
+            emit('login', {'message': 'There is no message', 'data': None, 'status': 'error'})
+        messages = mongo.db.messages.find({'id_conv': conversation['_id']})
+        ret = []
+        for m in messages:
+            ret.append({'text': m['text'], 'to_me': (m['to'] == login), 'id': str(uuid.uuid4())})
+        emit('get_history', {
+                             'message': None,
+                             'data': {
+                                 'messages': ret,
+                                 'with_login': with_login},
+                             'status': 'success'
+                             }
+             )
 
 
 @socketio.on('message', namespace='/chat')
 def chat_message(message):
     print(message)
+    if 'login_to' == " ":
+        return
     if 'login' in session:
-        mongo.db.users.update_one({'login': session['login']}, {'$set': {'online': True}})
-    emit('message',
-         {
-             'message': None,
-             'data':
-                 {
-                     'message': message['message'].encode('latin-1').decode('utf-8'),
-                     'from': session['login'],
-                     'id': str(uuid.uuid4())
-                 },
-             'status': 'success'
-         }, room=message['to'])
+        login = session['login']
+        login_to = message['to']
+        mongo.db.users.update_one({'login': login}, {'$set': {'online': True}})
+        # if there is conversation between
+
+        if login != login_to:
+            conversation = mongo.db.convertations.find_one({'members': {'$all': [login, login_to]}})
+        else:
+            conversation = mongo.db.convertations.find_one({'members': [login, login_to]})
+        if not conversation:
+            insert = mongo.db.convertations.insert_one({'members': [login, login_to]})
+            conversation = mongo.db.convertations.find_one(insert.inserted_id)
+        mongo.db.messages.insert_one({'id_conv': conversation['_id'], 'text': message['message'].encode('latin-1').decode('utf-8'), 'to': login_to})
+    else:
+        return
+    if login != login_to:
+        emit('message',
+             {
+                 'message': None,
+                 'data':
+                     {
+                         'message': message['message'].encode('latin-1').decode('utf-8'),
+                         'from': session['login'],
+                         'id': str(uuid.uuid4())
+                     },
+                 'status': 'success'
+             }, room=message['to'])
     emit('message',
          {
              'message': None,
@@ -143,18 +177,11 @@ def chat_message(message):
          })
 
 
-@socketio.on('disconnect_request', namespace='/chat')
-def disconnect_request():
-    emit('my_response', {'data': 'Disconnected!'})
-    disconnect()
-
-
-@socketio.on('my_ping', namespace='/chat')
-def ping_pong():
-    emit('my_pong')
-
-
 if __name__ == '__main__':
     with app.app_context():
+        conv = mongo.db.convertations.find_one({'members': ['alexl0l', 'alexl0l']})
+        mess = mongo.db.messages.find({'id_conv': conv['_id']})
+        for m in mess:
+            print(m['text'])
         mongo.db.users.update_many({}, {'$set': {'online': False}})
     socketio.run(app, debug=True)
