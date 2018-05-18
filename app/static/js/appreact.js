@@ -11,15 +11,15 @@ class Contact extends  React.Component {
     }
 
     static handleFocus(event) {
-        // console.log("focus", event.target.getElementsByTagName('p')['0'].innerText);
-        // console.log("focus");
+
         MessagesList.setCurrentUser(event.target.textContent);
+        Contacts.setCurrentUser(event.target.textContent);
         return false;
     }
 
 
     render() {
-        return <li className="contact" onClick={Contact.handleFocus} >
+        return <li className={this.props.isActive ? "contact active" : "contact"} onClick={Contact.handleFocus} >
             <div className="wrap">
                 <span className="contact-status online"/>
                 <img src="https://pp.userapi.com/c847021/v847021314/3ee09/zDgSsmKhxbo.jpg" alt/>
@@ -35,8 +35,11 @@ class Contacts extends React.Component {
         super(props, context);
         this.state = {
             users: [],
+            current_user: " ",
             messages: {}
         };
+        Contacts.setCurrentUser = Contacts.setCurrentUser.bind(this);
+        Contacts.isActive = Contacts.isActive.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
     }
 
@@ -61,12 +64,20 @@ class Contacts extends React.Component {
         return false;
     }
 
+    static setCurrentUser(user) {
+        this.setState({current_user: user});
+    }
+
+    static isActive (login) {
+        return this.state.current_user === login;
+    }
+
     render() {
         return <div id="sidepanel">
             <div id="contacts">
                 <ul>
                     {this.state.users.map(function (el) {
-                        return <Contact key={el} login={el}/>;
+                        return <Contact key={el} login={el} isActive={Contacts.isActive(el)}/>;
                     })}
                 </ul>
             </div>
@@ -81,13 +92,13 @@ class Message extends React.Component {
     }
     render() {
         if (this.props.to_me === true) {
-            return <li className="replies">
+            return <li className="sent">
                 <p>{this.props.text}</p>
             </li>;
         }
         else
         {
-            return <li className="sent">
+            return <li className="replies">
                 <p>{this.props.text}</p>
             </li>;
         }
@@ -99,11 +110,12 @@ class MessagesList extends  React.Component {
         super(props, context);
         this.state = {
             text: "",
-            current_user: "def",
-            messages: {"def": []}//{"123": [{id: 1, to_me: true, text: 'First Message'}, {id: 2, to_me:false, text:'Second'}], "def": []}
+            current_user: " ",
+            messages: {" ": []}//{"123": [{id: 1, to_me: true, text: 'First Message'}, {id: 2, to_me:false, text:'Second'}], "def": []}
         };
         MessagesList.setCurrentUser = MessagesList.setCurrentUser.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
+        this.clickSendButton = this.clickSendButton.bind(this);
     }
 
     componentDidMount() {
@@ -151,15 +163,17 @@ class MessagesList extends  React.Component {
 
     handleKeyPress(event) {
         if (event.key === 'Enter' && this.state.current_user !== "") {
-            socket.emit('message', {'to': this.state.current_user, 'message': event.target.value});
-
-            // let messagesl = this.state.messages;
-            // messagesl[this.state.current_user].push({to_me: false, text: event.target.value});
-            // this.setState({messages: messagesl});
-
-            this.refs.messageinput.value = "";
-            console.log(event.target.value);
+            this.sendMessage(this.state.current_user, event.target.value)
         }
+    }
+
+    clickSendButton(event) {
+            this.sendMessage(this.state.current_user, this.refs.messageinput.value);
+    }
+
+    sendMessage(to, msg) {
+        socket.emit('message', {'to': to, 'message': msg});
+        this.refs.messageinput.value = "";
     }
 
     render() {
@@ -181,7 +195,7 @@ class MessagesList extends  React.Component {
                 <div className="wrap">
                     <input className="search-field" type="text" placeholder="Write a message" ref='messageinput'
                            onKeyPress={this.handleKeyPress}/>
-                    <button className="submit"><i className="fa fa-paper-plane" aria-hidden="true"/></button>
+                    <button className="submit"><i className="fa fa-paper-plane" aria-hidden="true" onClick={this.clickSendButton}/></button>
                 </div>
 
             </div>

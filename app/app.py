@@ -1,9 +1,10 @@
 import datetime
+import re
 import uuid
 from threading import Lock
 
-from flask import Flask, render_template, session, request, jsonify
-from flask_socketio import SocketIO, send, emit, join_room, rooms, leave_room, close_room, disconnect
+from flask import Flask, session, request, jsonify
+from flask_socketio import SocketIO, emit, join_room, disconnect
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_pymongo import PyMongo
 import jwt
@@ -17,41 +18,16 @@ socketio = SocketIO(app, async_mode=async_mode)
 thread = None
 thread_lock = Lock()
 
-# @app.route('/')
-# def index():
-#     return render_template('index.html', async_mode=socketio.async_mode)
-#
-# @socketio.on('message')
-# def handle_message(msg):
-#     print('Message: ' + msg)
-#     send(msg, broadcast=True)
-
-
-# def background_thread():
-#     """Example of how to send server generated events to clients."""
-#     count = 0
-#     while True:
-#         socketio.sleep(10)
-#         count += 1
-#         socketio.emit('my_response',
-#                       {'data': 'Server generated event', 'count': count},
-#                       namespace='/chat')
-
-
 
 @app.before_first_request
 def activate_job():
     print("Hey")
     mongo.db.users.update_many({}, {'$set': {'online': False}})
 
+
 @app.route('/')
 def index():
-    return app.send_static_file('index_chat.html')
-
-
-@app.route('/chat')
-def chat():
-    return app.send_static_file('chat.html')
+    return app.send_static_file('index.html')
 
 
 @app.route('/api/signup', methods=['GET', 'POST'])
@@ -76,6 +52,12 @@ def signup():
 @socketio.on('signup', namespace='/chat')
 def chat_signup(data):
     data = data['data']
+    print(data['login'])
+    if not bool(re.match(r'^[a-zA-Z0-9_]{5,}$', data['login'])):
+        emit('signup_status',
+             {'message': 'You must use only letters, digits and \'_\'', 'data': None, 'status': 'error'}
+             )
+        return
     hashed_password = generate_password_hash(data['password'], method='sha256')
     try:
         user = mongo.db.users.find_one({'login': data['login']})
@@ -114,11 +96,10 @@ def chat_connect(data):
         emit('login', {'message': 'Password or user is invalid', 'data': None, 'status': 'error'})
 
 
-
 @socketio.on('disconnect', namespace='/chat')
 def chat_disconnect():
     if 'login' in session:
-        print('Client disconnected', request.sid, session['login'])
+        print('Client disconnected', session['login'])
         mongo.db.users.update_one({'login': session['login']}, {'$set': {'online': False}})
 
 
@@ -162,49 +143,6 @@ def chat_message(message):
          })
 
 
-# @socketio.on('my_broadcast_event', namespace='/chat')
-# def chat_broadcast_message(message):
-#     session['receive_count'] = session.get('receive_count', 0) + 1
-#     emit('my_response',
-#          {'data': message['data'], 'count': session['receive_count']},
-#          broadcast=True)
-#
-#
-# @socketio.on('join', namespace='/chat')
-# def join(message):
-#     join_room(message['room'])
-#     session['receive_count'] = session.get('receive_count', 0) + 1
-#     emit('my_response',
-#          {'data': 'In rooms: ' + ', '.join(rooms()),
-#           'count': session['receive_count']})
-#
-#
-# @socketio.on('leave', namespace='/chat')
-# def leave(message):
-#     leave_room(message['room'])
-#     session['receive_count'] = session.get('receive_count', 0) + 1
-#     emit('my_response',
-#          {'data': 'In rooms: ' + ', '.join(rooms()),
-#           'count': session['receive_count']})
-#
-#
-# @socketio.on('close_room', namespace='/chat')
-# def close(message):
-#     session['receive_count'] = session.get('receive_count', 0) + 1
-#     emit('my_response', {'data': 'Room ' + message['room'] + ' is closing.',
-#                          'count': session['receive_count']},
-#          room=message['room'])
-#     close_room(message['room'])
-#
-#
-# @socketio.on('my_room_event', namespace='/chat')
-# def send_room_message(message):
-#     session['receive_count'] = session.get('receive_count', 0) + 1
-#     emit('my_response',
-#          {'data': message['data'], 'count': session['receive_count']},
-#          room=message['room'])
-#
-#
 @socketio.on('disconnect_request', namespace='/chat')
 def disconnect_request():
     emit('my_response', {'data': 'Disconnected!'})
