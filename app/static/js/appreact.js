@@ -1,4 +1,4 @@
-var socket = io('http://127.0.01:5000/chat');
+var socket = io(location.protocol + '//' + document.domain + ':' + location.port + '/chat');
 socket.open();
 
 // class Chat extends React.Component {
