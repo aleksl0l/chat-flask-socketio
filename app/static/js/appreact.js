@@ -82,6 +82,7 @@ class Contacts extends React.Component {
     }
     ////////////////////////////////UPDATE DATA
     updateUsers(data) {
+        console.log(data.data.users);
         this.setState({users: data.data.users});
         // console.log('update', data.data.users)
     }
@@ -137,6 +138,7 @@ class Contacts extends React.Component {
             <div id="contacts">
                 <ul>
                     {this.state.users.map(function (el) {
+                        // console.log(el.url_img);
                         return <Contact key={el.login}
                                         login={el.login}
                                         img={el.url_img}

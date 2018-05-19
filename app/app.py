@@ -2,12 +2,12 @@ import datetime
 import os
 import re
 import uuid
-from flask import Flask, session, request, jsonify, flash, redirect, url_for
+from flask import Flask, session, request, jsonify
 from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_pymongo import PyMongo
 import jwt
-from werkzeug.utils import secure_filename
+
 
 async_mode = None
 
@@ -128,7 +128,8 @@ def get_available_users():
         mongo.db.users.update_one({'login': session['login']}, {'$set': {'online': True}})
     users_list = []
     for u in users:
-        users_list.append({'login': u['login'], 'url_img': u['url_img']})
+        url_img = u['url_img'] if u['url_img'] else os.path.join(request.url_root, 'images', 'def.jpeg')
+        users_list.append({'login': u['login'], 'url_img': url_img})
     emit('users', {'message': None, 'data': {'users': users_list}, 'status': 'success'})
 
 
@@ -205,10 +206,10 @@ def chat_message(message):
 
 
 if __name__ == '__main__':
-    with app.app_context():
-        conv = mongo.db.convertations.find_one({'members': ['alexl0l', 'alexl0l']})
-        mess = mongo.db.messages.find({'id_conv': conv['_id']})
-        for m in mess:
-            print(m['text'])
-        mongo.db.users.update_many({}, {'$set': {'online': False}})
+    # with app.app_context():
+    #     conv = mongo.db.convertations.find_one({'members': ['alexl0l', 'alexl0l']})
+    #     mess = mongo.db.messages.find({'id_conv': conv['_id']})
+    #     for m in mess:
+    #         print(m['text'])
+    #     mongo.db.users.update_many({}, {'$set': {'online': False}})
     socketio.run(app, debug=True)
