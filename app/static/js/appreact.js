@@ -27,7 +27,23 @@ class Contact extends React.Component {
         if (Auth.getLogin() === "") {
             return;
         }
-        let user = event.target.textContent === "Saved messages" ? Auth.getLogin() : event.target.textContent;
+        let login = null;
+        if (event.target.localName === 'p') {
+            console.log('p');
+            login = event.target.textContent;
+        }
+        else if (event.target.localName === 'img') {
+            console.log('img');
+            login = event.target.parentElement.getElementsByClassName('name')['0'].innerText;
+            console.log(event.target.parentElement.getElementsByClassName('name')['0'].innerText);
+        }
+        else {
+            console.log('li');
+            login = event.target.getElementsByClassName('name')['0'].textContent;
+        }
+        // console.log(login);
+
+        let user = login === "Saved messages" ? Auth.getLogin() : login;
         user = user.split(" ")[0];
         MessagesList.setCurrentUser(user);
         Contacts.setCurrentUser(user);
@@ -66,6 +82,8 @@ class Contacts extends React.Component {
         Contacts.isActive = Contacts.isActive.bind(this);
         Contacts.incrNumMsg = Contacts.incrNumMsg.bind(this);
         Contacts.getNumMsg = Contacts.getNumMsg.bind(this);
+
+        Contacts.getImgLogin = Contacts.getImgLogin.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
     }
 
@@ -116,6 +134,13 @@ class Contacts extends React.Component {
         else {
             return 0;
         }
+    }
+
+    static getImgLogin(login) {
+        var user = data.data.users.find(function (user) {
+            return user.login === login;
+        });
+        return user.url_img;
     }
 
     static setCurrentUser(user) {
@@ -193,6 +218,7 @@ class MessagesList extends  React.Component {
         this.state = {
             text: "",
             current_user: " ",
+            current_user_img: " ",
             messages: {" ": []}
         };
         MessagesList.setCurrentUser = MessagesList.setCurrentUser.bind(this);
@@ -248,7 +274,7 @@ class MessagesList extends  React.Component {
     }
 
     static setCurrentUser(user) {
-        // console.log(user, this.state.messages[user]);
+        // console.log(Contacts.getImgLogin(user));
         this.setState({current_user: user});
         if (!(user in this.state.messages)) {
             let messagesl = this.state.messages;
