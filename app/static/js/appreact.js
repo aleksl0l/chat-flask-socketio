@@ -403,7 +403,7 @@ class Auth extends React.Component {
   }
 
   fileUpload(file){
-    const url = 'http://127.0.0.1:5000/image?login=' + Auth.getLogin();
+    const url = location.protocol + '//' + document.domain + ':' + location.port + '/chat?login=' + Auth.getLogin();
     const formData = new FormData();
     formData.append('file', file);
     const config = {
