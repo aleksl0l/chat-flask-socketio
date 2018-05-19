@@ -1,6 +1,7 @@
 # chat-flask-socketio
 
 ### Installation
+You must have MongoDB and virtualenv installed  on your machine
 ```shell
 virtualenv chat
 cd chat
