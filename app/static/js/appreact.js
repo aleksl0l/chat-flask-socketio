@@ -46,7 +46,7 @@ class Contact extends React.Component {
                         className="name">
                         {(this.props.isYou ? "Saved messages" : this.props.login)}
                     </p>
-                    <span>{" "+ (this.props.numUnreadMsg ? this.props.numUnreadMsg : "")}</span>
+                    {this.props.numUnreadMsg ? <div id="not-read">{this.props.numUnreadMsg}</div> : null}
                 </div>
             </div>
         </li>;
@@ -80,11 +80,16 @@ class Contacts extends React.Component {
         this.handleSubmit();
         setInterval(this.handleSubmit, 1000);
     }
+
     ////////////////////////////////UPDATE DATA
     updateUsers(data) {
-        console.log(data.data.users);
+        if (Auth.isLogIn()) {
+            var my_acc = data.data.users.find(function (user) {
+                return user.login === Auth.getLogin();
+            });
+            Auth.setUrlImg(my_acc.url_img);
+        }
         this.setState({users: data.data.users});
-        // console.log('update', data.data.users)
     }
 
     handleSubmit(event) {
@@ -101,7 +106,7 @@ class Contacts extends React.Component {
             _numMsg[user] = 1;
         }
         this.setState({numMsg: _numMsg});
-        console.log(this.state.numMsg);
+        // console.log(this.state.numMsg);
     }
 
     static getNumMsg(user) {
@@ -118,37 +123,42 @@ class Contacts extends React.Component {
         this.setState({current_user: user});
     }
 
-    static isActive (login) {
+    static isActive(login) {
         // console.log(login);
         // console.log(this.state.current_user);
         return this.state.current_user === login;
     }
 
     render() {
-        return <div id="sidepanel">
-            <div id="profile">
-                <div className="wrap">
-                    <img id="profile-img"
-                         src={Auth.getUrlImg()}
-                         className="online"
-                         alt="" />
+        if (Auth.isLogIn()) {
+            return <div id="sidepanel">
+                <div id="profile">
+                    <div className="wrap">
+                        <img id="profile-img"
+                             src={Auth.getUrlImg()}
+                             className="online"
+                             alt=""/>
                         <p>{Auth.getLogin()}</p>
+                    </div>
                 </div>
-            </div>
-            <div id="contacts">
-                <ul>
-                    {this.state.users.map(function (el) {
-                        // console.log(el.url_img);
-                        return <Contact key={el.login}
-                                        login={el.login}
-                                        img={el.url_img}
-                                        numUnreadMsg={Contacts.getNumMsg(el.login)}
-                                        isYou={el.login===Auth.getLogin()}
-                                        isActive={Contacts.isActive(el.login)}/>;
-                    })}
-                </ul>
-            </div>
-        </div>;
+                <div id="contacts">
+                    <ul>
+                        {this.state.users.map(function (el) {
+                            // console.log(el.url_img);
+                            return <Contact key={el.login}
+                                            login={el.login}
+                                            img={el.url_img}
+                                            numUnreadMsg={Contacts.getNumMsg(el.login)}
+                                            isYou={el.login === Auth.getLogin()}
+                                            isActive={Contacts.isActive(el.login)}/>;
+                        })}
+                    </ul>
+                </div>
+            </div>;
+        }
+        else {
+            return null;
+        }
     }
 }
 
@@ -211,7 +221,7 @@ class MessagesList extends  React.Component {
         if (Auth.getLogin() === "") {
             return;
         }
-        console.log('History');
+        // console.log('History');
         let messagesl = this.state.messages;
         messagesl[data.data.with_login].push(...data.data.messages);
         this.setState({messages: messagesl});
@@ -314,7 +324,9 @@ class Auth extends React.Component {
         this.update_password = this.update_password.bind(this);
         Auth.addFile = Auth.addFile.bind(this);
         Auth.getLogin = Auth.getLogin.bind(this);
+        Auth.isLogIn = Auth.isLogIn.bind(this);
         Auth.getUrlImg = Auth.getUrlImg.bind(this);
+        Auth.setUrlImg = Auth.setUrlImg.bind(this);
 
         this.onFormSubmit = this.onFormSubmit.bind(this);
         this.onChange = this.onChange.bind(this);
@@ -339,8 +351,17 @@ class Auth extends React.Component {
     static getLogin() {
         return this.state.logged_user;
     }
+
+    static isLogIn() {
+        return this.state.logged_user !== "";
+    }
+
     static getUrlImg() {
         return this.state.url_img;
+    }
+
+    static setUrlImg(url) {
+        this.setState({url_img: url});
     }
 
     handleSignUpStatus(data) {
@@ -386,7 +407,7 @@ class Auth extends React.Component {
             headers: {'Content-Type':'multipart/form-data'},
             body: formData }).then(
         (response) => {
-            console.log(response);
+            // console.log(response);
         }
     ).catch( () => {} );
     }
@@ -395,7 +416,7 @@ class Auth extends React.Component {
      onFormSubmit(e){
         e.preventDefault() ;// Stop form submit
         this.fileUpload(this.state.file).then((response)=>{
-        console.log(response.data);
+        // console.log(response.data);
     })
   }
   onChange(e) {
@@ -418,15 +439,15 @@ render() {
     if (this.state.logged_user === "") //not logged
     {
         return (
-            <div>
-                <input type="text" placeholder="login" value={this.state.login} onChange={this.update_login}/>
-                <input type="password" placeholder="password" value={this.state.password} onChange={this.update_password}/>
-                <button onClick={this.handleSignIn}>
+            <div id="login-box">
+                <input className="input-login" type="text" placeholder="login" value={this.state.login} onChange={this.update_login}/>
+                <input className="input-login" type="password" placeholder="password" value={this.state.password} onChange={this.update_password}/>
+                <a className="btn" onClick={this.handleSignIn}>
                     Sign in
-                </button>
-                <button onClick={this.handleSignUp}>
+                </a>
+                <a className="btn btn-blue" onClick={this.handleSignUp}>
                     Sign up
-                </button>
+                </a>
                 <span>{this.state.message}</span>
             </div>
         );
@@ -448,17 +469,17 @@ render() {
 
 // class Chat extends React.Component {
 //     render() {
-//         if (Auth.getLogin() !== "")
+//         if (Auth.isLogIn())
 //         {
-//             return <div id="frame">
-//                 <Auth />
+//             conso
+//             return <div>
 //                 <Contacts />
 //                 <MessagesList />
 //             </div>
 //         }
 //         else
 //         {
-//             return
+//             return <div></div>
 //         }
 //     }
 //
@@ -468,8 +489,8 @@ render() {
 ReactDOM.render(
     <div id="frame">
         <Auth />
-        <Contacts />
-        <MessagesList />
+        <Contacts/>
+        <MessagesList/>
     </div>,
     document.getElementById('chat')
 );
