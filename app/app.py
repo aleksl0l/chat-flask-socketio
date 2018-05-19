@@ -79,10 +79,12 @@ def chat_signup(data):
         user = mongo.db.users.find_one({'login': data['login']})
         if user:
             emit('signup_status', {'message': 'This login is already exist', 'data': None, 'status': 'error'})
+            return
         mongo.db.users.insert({'public_id': str(uuid.uuid4()),
                                'login': data['login'],
                                'password': hashed_password,
                                'online': False,
+                               'url_img': None,
                                'date': datetime.datetime.utcnow()})
         emit('signup_status', {'message': None, 'data': None, 'status': 'success'})
     except Exception as e:
