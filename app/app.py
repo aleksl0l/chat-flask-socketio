@@ -16,6 +16,8 @@ app.config.from_pyfile('config.py')
 mongo = PyMongo(app)
 socketio = SocketIO(app, async_mode=async_mode)
 
+with app.app_context():
+    mongo.db.users.update_many({}, {'$set': {'online': False}})
 
 @app.route('/')
 def index():
@@ -206,10 +208,4 @@ def chat_message(message):
 
 
 if __name__ == '__main__':
-    # with app.app_context():
-    #     conv = mongo.db.convertations.find_one({'members': ['alexl0l', 'alexl0l']})
-    #     mess = mongo.db.messages.find({'id_conv': conv['_id']})
-    #     for m in mess:
-    #         print(m['text'])
-    #     mongo.db.users.update_many({}, {'$set': {'online': False}})
     socketio.run(app, debug=True)
