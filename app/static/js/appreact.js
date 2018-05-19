@@ -24,18 +24,29 @@ class Contact extends React.Component {
     }
 
     static handleFocus(event) {
-        MessagesList.setCurrentUser(event.target.textContent);
-        Contacts.setCurrentUser(event.target.textContent);
+        if (Auth.getLogin() === "") {
+            return;
+        }
+        let user = event.target.textContent === "Saved messages" ? Auth.getLogin() : event.target.textContent;
+        user = user.split(" ")[0];
+        MessagesList.setCurrentUser(user);
+        Contacts.setCurrentUser(user);
         return false;
     }
 
     render() {
+        // console.log(this.props.login, this.props.isActive);
         return <li className={this.props.isActive ? "contact active" : "contact"} onClick={Contact.handleFocus} >
             <div className="wrap">
                 <span className="contact-status online"/>
-                <img src="https://grand-vet.ru/wp-content/uploads/2017/11/default-avatar-250x250.png" alt/>
+                <img src={this.props.img} alt/>
                 <div className="meta">
-                    <p login={this.props.login} className="name">{this.props.login}</p>
+                    <p
+                        login={this.props.login}
+                        className="name">
+                        {(this.props.isYou ? "Saved messages" : this.props.login)}
+                    </p>
+                    <span>{" "+ (this.props.numUnreadMsg ? this.props.numUnreadMsg : "")}</span>
                 </div>
             </div>
         </li>;
@@ -49,10 +60,12 @@ class Contacts extends React.Component {
         this.state = {
             users: [],
             current_user: " ",
-            messages: {}
+            numMsg: {}
         };
         Contacts.setCurrentUser = Contacts.setCurrentUser.bind(this);
         Contacts.isActive = Contacts.isActive.bind(this);
+        Contacts.incrNumMsg = Contacts.incrNumMsg.bind(this);
+        Contacts.getNumMsg = Contacts.getNumMsg.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
     }
 
@@ -70,6 +83,7 @@ class Contacts extends React.Component {
     ////////////////////////////////UPDATE DATA
     updateUsers(data) {
         this.setState({users: data.data.users});
+        // console.log('update', data.data.users)
     }
 
     handleSubmit(event) {
@@ -77,20 +91,58 @@ class Contacts extends React.Component {
         return false;
     }
 
+    static incrNumMsg(user) {
+        let _numMsg = this.state.numMsg;
+        if (_numMsg[user]) {
+            _numMsg[user]++;
+        }
+        else {
+            _numMsg[user] = 1;
+        }
+        this.setState({numMsg: _numMsg});
+        console.log(this.state.numMsg);
+    }
+
+    static getNumMsg(user) {
+        if (this.state.numMsg[user]) {
+            return this.state.numMsg[user];
+        }
+        else {
+            return 0;
+        }
+    }
+
     static setCurrentUser(user) {
+        // console.log("Activete in Contacts", user);
         this.setState({current_user: user});
     }
 
     static isActive (login) {
+        // console.log(login);
+        // console.log(this.state.current_user);
         return this.state.current_user === login;
     }
 
     render() {
         return <div id="sidepanel">
+            <div id="profile">
+                <div className="wrap">
+                    <img id="profile-img"
+                         src={Auth.getUrlImg()}
+                         className="online"
+                         alt="" />
+                        <p>{Auth.getLogin()}</p>
+                </div>
+            </div>
             <div id="contacts">
                 <ul>
                     {this.state.users.map(function (el) {
-                        return <Contact key={el} login={el} isActive={Contacts.isActive(el)}/>;
+                        return <Contact key={el.login}
+                                        login={el.login}
+                                        img={el.url_img}
+                                        numUnreadMsg={Contacts.getNumMsg(el.login)}
+                                        isYou={el.login===Auth.getLogin()}
+                                        isActive={Contacts.isActive(el.login)}/>;
                     })}
                 </ul>
             </div>
@@ -129,7 +181,7 @@ class MessagesList extends  React.Component {
         this.state = {
             text: "",
             current_user: " ",
-            messages: {" ": []}//{"123": [{id: 1, to_me: true, text: 'First Message'}, {id: 2, to_me:false, text:'Second'}], "def": []}
+            messages: {" ": []}
         };
         MessagesList.setCurrentUser = MessagesList.setCurrentUser.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
@@ -154,8 +206,11 @@ class MessagesList extends  React.Component {
     }
 
     handleGetHistory(data) {
+        if (Auth.getLogin() === "") {
+            return;
+        }
+        console.log('History');
         let messagesl = this.state.messages;
-        // console.log('histro', data.data.messages);
         messagesl[data.data.with_login].push(...data.data.messages);
         this.setState({messages: messagesl});
     }
@@ -171,10 +226,10 @@ class MessagesList extends  React.Component {
                 messagesl[data.data.from] = [{'to_me': true, 'text': data.data.message, 'id': data.data.id}];
             }
             this.setState({messages: messagesl});
+            Contacts.incrNumMsg(data.data.from);
         }
         else
         {
-            // console.log("test1", messagesl, data);
             messagesl[data.data.to].push({'to_me': false, 'text': data.data.message, 'id': data.data.id});
             this.setState({messages: messagesl});
         }
@@ -199,7 +254,7 @@ class MessagesList extends  React.Component {
     }
 
     clickSendButton(event) {
-            this.sendMessage(this.state.current_user, this.refs.messageinput.value);
+        this.sendMessage(this.state.current_user, this.refs.messageinput.value);
     }
 
     sendMessage(to, msg) {
@@ -214,7 +269,7 @@ class MessagesList extends  React.Component {
     render() {
         return <div className="content">
             <div className="contact-profile">
-                <img src="https://grand-vet.ru/wp-content/uploads/2017/11/default-avatar-250x250.png" alt="" />
+                <img src={Auth.getUrlImg()} alt="" />
                 <p>Chat with {this.state.current_user}</p>
             </div>
             <div className="messages">
@@ -232,7 +287,7 @@ class MessagesList extends  React.Component {
                 <div className="wrap">
                     <input className="search-field" type="text" placeholder="Write a message" ref='messageinput'
                            onKeyPress={this.handleKeyPress}/>
-                    <button className="submit"><i className="fa fa-paper-plane" aria-hidden="true" onClick={this.clickSendButton}/></button>
+                    <button className="submit" onClick={this.clickSendButton}><i className="fa fa-paper-plane" aria-hidden="true"/></button>
                 </div>
             </div>
         </div>;
@@ -246,6 +301,7 @@ class Auth extends React.Component {
         super(props, context);
         this.state = {
             logged_user: "",
+            url_img: null,
             login: "",
             password: "",
             message: ""
@@ -254,6 +310,13 @@ class Auth extends React.Component {
         this.handleSignUp = this.handleSignUp.bind(this);
         this.update_login = this.update_login.bind(this);
         this.update_password = this.update_password.bind(this);
+        Auth.addFile = Auth.addFile.bind(this);
+        Auth.getLogin = Auth.getLogin.bind(this);
+        Auth.getUrlImg = Auth.getUrlImg.bind(this);
+
+        this.onFormSubmit = this.onFormSubmit.bind(this);
+        this.onChange = this.onChange.bind(this);
+        this.fileUpload = this.fileUpload.bind(this);
     }
 
     componentDidMount() {
@@ -270,8 +333,15 @@ class Auth extends React.Component {
             }
         );
     }
+
+    static getLogin() {
+        return this.state.logged_user;
+    }
+    static getUrlImg() {
+        return this.state.url_img;
+    }
+
     handleSignUpStatus(data) {
-        // console.log("sign up");
         if (data.status === "error") {
             this.setState({message: data.message});
         }
@@ -281,11 +351,10 @@ class Auth extends React.Component {
     }
     handleSignInStatus(data) {
         if (data.status === "error") {
-            // console.log("sign in");
             this.setState({message: data.message});
         }
         else {
-            this.setState({logged_user: this.state.login})
+            this.setState({logged_user: this.state.login, url_img: data.data.url_img})
         }
     }
 
@@ -305,29 +374,93 @@ class Auth extends React.Component {
         this.setState({password: event.target.value});
     }
 
-    render() {
-        if (this.state.logged_user === "") //not logged
-        {
-            return (
-                <div>
-                    <input type="text" placeholder="login" value={this.state.login} onChange={this.update_login}/>
-                    <input type="password" placeholder="password" value={this.state.password} onChange={this.update_password}/>
-                    <button onClick={this.handleSignIn}>
-                        Sign in
-                    </button>
-                    <button onClick={this.handleSignUp}>
-                        Sign up
-                    </button>
-                    <span>{this.state.message}</span>
-                </div>
-            );
+    static addFile(event) {
+        var formData = new FormData();
+        formData.append("file", event.target.files[0]);
+
+        var tmp = event;
+        fetch('/image', {
+            method: 'POST',
+            headers: {'Content-Type':'multipart/form-data'},
+            body: formData }).then(
+        (response) => {
+            console.log(response);
         }
-        else
-        {
-            return (<p>Welcome {this.state.logged_user}</p>);
+    ).catch( () => {} );
+    }
+
+
+     onFormSubmit(e){
+        e.preventDefault() ;// Stop form submit
+        this.fileUpload(this.state.file).then((response)=>{
+        console.log(response.data);
+    })
+  }
+  onChange(e) {
+    this.setState({file:e.target.files[0]})
+  }
+
+  fileUpload(file){
+    const url = 'http://127.0.0.1:5000/image?login=' + Auth.getLogin();
+    const formData = new FormData();
+    formData.append('file', file);
+    const config = {
+        headers: {
+            'content-type': 'multipart/form-data'
         }
+    };
+    return axios.post(url, formData,config)
+  }
+
+render() {
+    if (this.state.logged_user === "") //not logged
+    {
+        return (
+            <div>
+                <input type="text" placeholder="login" value={this.state.login} onChange={this.update_login}/>
+                <input type="password" placeholder="password" value={this.state.password} onChange={this.update_password}/>
+                <button onClick={this.handleSignIn}>
+                    Sign in
+                </button>
+                <button onClick={this.handleSignUp}>
+                    Sign up
+                </button>
+                <span>{this.state.message}</span>
+            </div>
+        );
+    }
+    else
+    {
+        return (
+            <div>
+                  <form onSubmit={this.onFormSubmit}>
+                    <h1>Upload avatar</h1>
+                    <input type="file" onChange={this.onChange} />
+                    <button type="submit">Upload</button>
+                  </form>
+            </div>);
+
     }
 }
+}
+
+// class Chat extends React.Component {
+//     render() {
+//         if (Auth.getLogin() !== "")
+//         {
+//             return <div id="frame">
+//                 <Auth />
+//                 <Contacts />
+//                 <MessagesList />
+//             </div>
+//         }
+//         else
+//         {
+//             return
+//         }
+//     }
+//
+// }
 
 
 ReactDOM.render(

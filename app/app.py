@@ -1,11 +1,13 @@
 import datetime
+import os
 import re
 import uuid
-from flask import Flask, session, request, jsonify
+from flask import Flask, session, request, jsonify, flash, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_pymongo import PyMongo
 import jwt
+from werkzeug.utils import secure_filename
 
 async_mode = None
 
@@ -18,6 +20,25 @@ socketio = SocketIO(app, async_mode=async_mode)
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
+
+
+@app.route('/image', methods=['POST'])
+def upload_file():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            return jsonify({'message': 'No file found', 'data': None, 'status': 'error'})
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'message': 'No file found', 'data': None, 'status': 'error'})
+        filename = file.filename
+        filename = str(uuid.uuid4()) + filename[filename.rfind('.'):]
+
+        file.save(os.path.join(app.root_path, 'static', 'images', filename))
+
+        file_url = os.path.join(request.url_root, 'images', filename)
+        mongo.db.users.update_one({'login': request.args['login']}, {'$set': {'url_img': file_url}})
+        return jsonify({'message': None, 'data': None, 'status': 'success'})
 
 
 @app.route('/api/signup', methods=['GET', 'POST'])
@@ -82,7 +103,13 @@ def chat_connect(data):
         print(user['login'])
         join_room(user['login'])
         mongo.db.users.update_one({'login': user['login']}, {'$set': {'online': True}})
-        emit('login', {'message': None, 'data': {'token': token.decode('UTF-8')}, 'status': 'success'})
+        url_img = user['url_img'] if user['url_img'] else os.path.join(request.url_root, 'images', 'def.jpeg')
+        emit('login', {'message': None,
+                       'data': {
+                           'token': token.decode('UTF-8'),
+                           'url_img': url_img
+                       },
+                       'status': 'success'})
     else:
         emit('login', {'message': 'Password or user is invalid', 'data': None, 'status': 'error'})
 
@@ -101,7 +128,7 @@ def get_available_users():
         mongo.db.users.update_one({'login': session['login']}, {'$set': {'online': True}})
     users_list = []
     for u in users:
-        users_list.append(u['login'])
+        users_list.append({'login': u['login'], 'url_img': u['url_img']})
     emit('users', {'message': None, 'data': {'users': users_list}, 'status': 'success'})
 
 
