@@ -1,9 +1,22 @@
 var socket = io(location.protocol + '//' + document.domain + ':' + location.port + '/chat');
 socket.open();
 
-// class Chat extends React.Component {
+// var prettyMessage = function (msg) {
+//     let arr = msg.split(' ');
 //
-// }
+//     let i;
+//     for (i = 0; i < arr.length; i++) {
+//         if (arr[i].length > 40) {
+//             let j = 40;
+//             while (j < arr[i].length) {
+//                 arr[i] = arr[i].slice(0, j) + '' + arr[i].slice(j, arr[i].length);
+//                 j += 40 + 1;
+//             }
+//         }
+//     }
+//     return arr.join(' ');
+// };
+
 class Contact extends React.Component {
     constructor(props, context) {
         super(props, context);
@@ -89,6 +102,10 @@ class Contacts extends React.Component {
 class Message extends React.Component {
     constructor(props, context) {
         super(props, context);
+        // console.log(props);
+        // this.state = {
+        //     text: prettyMessage(props.text)
+        // }
     }
     render() {
         if (this.props.to_me === true) {
@@ -138,13 +155,13 @@ class MessagesList extends  React.Component {
 
     handleGetHistory(data) {
         let messagesl = this.state.messages;
-        console.log('histro', data.data.messages);
+        // console.log('histro', data.data.messages);
         messagesl[data.data.with_login].push(...data.data.messages);
         this.setState({messages: messagesl});
     }
 
     handleMessage(data) {
-        console.log('There is a message!', data.data);
+        // console.log('There is a message!', data.data);
         let messagesl = this.state.messages;
         if ('from' in data.data) {
             if (data.data.from in messagesl) {
@@ -157,19 +174,19 @@ class MessagesList extends  React.Component {
         }
         else
         {
-            console.log("test1", messagesl, data);
+            // console.log("test1", messagesl, data);
             messagesl[data.data.to].push({'to_me': false, 'text': data.data.message, 'id': data.data.id});
             this.setState({messages: messagesl});
         }
     }
 
     static setCurrentUser(user) {
-        console.log(user, this.state.messages[user]);
+        // console.log(user, this.state.messages[user]);
         this.setState({current_user: user});
         if (!(user in this.state.messages)) {
             let messagesl = this.state.messages;
             messagesl[user] = [];
-            console.log(messagesl);
+            // console.log(messagesl);
             this.setState({messages: messagesl});
             socket.emit('get_history', {'with_login': user});
         }
@@ -254,7 +271,7 @@ class Auth extends React.Component {
         );
     }
     handleSignUpStatus(data) {
-        console.log("sign up");
+        // console.log("sign up");
         if (data.status === "error") {
             this.setState({message: data.message});
         }
@@ -264,7 +281,7 @@ class Auth extends React.Component {
     }
     handleSignInStatus(data) {
         if (data.status === "error") {
-            console.log("sign in");
+            // console.log("sign in");
             this.setState({message: data.message});
         }
         else {
