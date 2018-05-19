@@ -190,6 +190,10 @@ class MessagesList extends  React.Component {
         this.refs.messageinput.value = "";
     }
 
+    componentDidUpdate() {
+        this.messagesEnd.scrollIntoView({ behavior: "smooth" })
+    }
+
     render() {
         return <div className="content">
             <div className="contact-profile">
@@ -204,6 +208,8 @@ class MessagesList extends  React.Component {
                         })
                     }
                 </ul>
+                <div style={{ float:"left", clear: "both" }} ref={(el) => { this.messagesEnd = el; }}>
+                </div>
             </div>
             <div className="message-input">
                 <div className="wrap">
@@ -211,7 +217,6 @@ class MessagesList extends  React.Component {
                            onKeyPress={this.handleKeyPress}/>
                     <button className="submit"><i className="fa fa-paper-plane" aria-hidden="true" onClick={this.clickSendButton}/></button>
                 </div>
-
             </div>
         </div>;
     }
