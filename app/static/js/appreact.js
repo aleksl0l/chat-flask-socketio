@@ -118,7 +118,7 @@ class Contacts extends React.Component {
     }
 
     static getImgLogin(login) {
-        var user = data.data.users.find(function (user) {
+        var user = this.state.users.find(function (user) {
             return user.login === login;
         });
         return user.url_img;
@@ -171,18 +171,12 @@ class Message extends React.Component {
     constructor(props, context) {
         super(props, context);
     }
+
     render() {
-        if (this.props.to_me === true) {
-            return <li className="sent">
+            return <li className={this.props.to_me ? "sent" : "replies"}>
+                <img src={MessagesList.getCurrentUserImg()} alt="" />
                 <p>{this.props.text}</p>
             </li>;
-        }
-        else
-        {
-            return <li className="replies">
-                <p>{this.props.text}</p>
-            </li>;
-        }
     }
 }
 
@@ -197,6 +191,8 @@ class MessagesList extends  React.Component {
             messages: {" ": []}
         };
         MessagesList.setCurrentUser = MessagesList.setCurrentUser.bind(this);
+
+        MessagesList.getCurrentUserImg = MessagesList.getCurrentUserImg.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
         this.clickSendButton = this.clickSendButton.bind(this);
     }
@@ -247,13 +243,17 @@ class MessagesList extends  React.Component {
     }
 
     static setCurrentUser(user) {
-        this.setState({current_user: user});
+        this.setState({current_user: user, current_user_img: Contacts.getImgLogin(user)});
         if (!(user in this.state.messages)) {
             let messagesl = this.state.messages;
             messagesl[user] = [];
             this.setState({messages: messagesl});
             socket.emit('get_history', {'with_login': user});
         }
+    }
+
+    static getCurrentUserImg() {
+        return this.state.current_user_img;
     }
 
     handleKeyPress(event) {
@@ -278,7 +278,7 @@ class MessagesList extends  React.Component {
     render() {
         return <div className="content">
             <div className="contact-profile">
-                <img src={Auth.getUrlImg()} alt="" />
+                <img src={this.state.current_user_img} alt="" />
                 <p>Chat with {this.state.current_user}</p>
             </div>
             <div className="messages">
@@ -350,7 +350,6 @@ class Auth extends React.Component {
     }
 
     static isLogIn() {
-        console.log(this.state.logged_user !== "");
         return this.state.logged_user !== "";
 
     }
