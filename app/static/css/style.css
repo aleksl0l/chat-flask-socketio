@@ -801,18 +801,16 @@ body {
     float: right;
     font-size: 12pt;
     font-weight: bold;
-    line-height: 25px;
-    margin-top: -15px;
-    margin-right: 5px;
-    background-color: gray;
-
-    width: 25px;
+    line-height: 24px;
+    margin-top: -9px;
+    margin-right: 1px;
+    background-color: #40ACE3;
+    min-width: 25px;
     height: 25px;
     color: white;
     text-align: center;
     border-radius: 50%;
 }
-
 a.btn {
 	display: inline-block;
 	color: #666;

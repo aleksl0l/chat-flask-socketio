@@ -1,21 +1,6 @@
 var socket = io(location.protocol + '//' + document.domain + ':' + location.port + '/chat');
 socket.open();
 
-// var prettyMessage = function (msg) {
-//     let arr = msg.split(' ');
-//
-//     let i;
-//     for (i = 0; i < arr.length; i++) {
-//         if (arr[i].length > 40) {
-//             let j = 40;
-//             while (j < arr[i].length) {
-//                 arr[i] = arr[i].slice(0, j) + '' + arr[i].slice(j, arr[i].length);
-//                 j += 40 + 1;
-//             }
-//         }
-//     }
-//     return arr.join(' ');
-// };
 
 class Contact extends React.Component {
     constructor(props, context) {
@@ -29,19 +14,14 @@ class Contact extends React.Component {
         }
         let login = null;
         if (event.target.localName === 'p') {
-            console.log('p');
             login = event.target.textContent;
         }
         else if (event.target.localName === 'img') {
-            console.log('img');
             login = event.target.parentElement.getElementsByClassName('name')['0'].innerText;
-            console.log(event.target.parentElement.getElementsByClassName('name')['0'].innerText);
         }
         else {
-            console.log('li');
             login = event.target.getElementsByClassName('name')['0'].textContent;
         }
-        // console.log(login);
 
         let user = login === "Saved messages" ? Auth.getLogin() : login;
         user = user.split(" ")[0];
@@ -51,7 +31,6 @@ class Contact extends React.Component {
     }
 
     render() {
-        // console.log(this.props.login, this.props.isActive);
         return <li className={this.props.isActive ? "contact active" : "contact"} onClick={Contact.handleFocus} >
             <div className="wrap">
                 <span className="contact-status online"/>
@@ -116,6 +95,9 @@ class Contacts extends React.Component {
     }
 
     static incrNumMsg(user) {
+        if (user === this.state.current_user) {
+            return;
+        }
         let _numMsg = this.state.numMsg;
         if (_numMsg[user]) {
             _numMsg[user]++;
@@ -124,7 +106,6 @@ class Contacts extends React.Component {
             _numMsg[user] = 1;
         }
         this.setState({numMsg: _numMsg});
-        // console.log(this.state.numMsg);
     }
 
     static getNumMsg(user) {
@@ -144,13 +125,12 @@ class Contacts extends React.Component {
     }
 
     static setCurrentUser(user) {
-        // console.log("Activete in Contacts", user);
-        this.setState({current_user: user});
+        let _numMsg = this.state.numMsg;
+        _numMsg[user] = 0;
+        this.setState({current_user: user, numMsg: _numMsg});
     }
 
     static isActive(login) {
-        // console.log(login);
-        // console.log(this.state.current_user);
         return this.state.current_user === login;
     }
 
@@ -169,7 +149,6 @@ class Contacts extends React.Component {
                 <div id="contacts">
                     <ul>
                         {this.state.users.map(function (el) {
-                            // console.log(el.url_img);
                             return <Contact key={el.login}
                                             login={el.login}
                                             img={el.url_img}
@@ -191,10 +170,6 @@ class Contacts extends React.Component {
 class Message extends React.Component {
     constructor(props, context) {
         super(props, context);
-        // console.log(props);
-        // this.state = {
-        //     text: prettyMessage(props.text)
-        // }
     }
     render() {
         if (this.props.to_me === true) {
@@ -247,14 +222,12 @@ class MessagesList extends  React.Component {
         if (Auth.getLogin() === "") {
             return;
         }
-        // console.log('History');
         let messagesl = this.state.messages;
         messagesl[data.data.with_login].push(...data.data.messages);
         this.setState({messages: messagesl});
     }
 
     handleMessage(data) {
-        // console.log('There is a message!', data.data);
         let messagesl = this.state.messages;
         if ('from' in data.data) {
             if (data.data.from in messagesl) {
@@ -274,12 +247,10 @@ class MessagesList extends  React.Component {
     }
 
     static setCurrentUser(user) {
-        // console.log(Contacts.getImgLogin(user));
         this.setState({current_user: user});
         if (!(user in this.state.messages)) {
             let messagesl = this.state.messages;
             messagesl[user] = [];
-            // console.log(messagesl);
             this.setState({messages: messagesl});
             socket.emit('get_history', {'with_login': user});
         }
@@ -301,7 +272,7 @@ class MessagesList extends  React.Component {
     }
 
     componentDidUpdate() {
-        this.messagesEnd.scrollIntoView({ behavior: "smooth" })
+        this.messagesEnd.scrollIntoView({ behavior: "instant" })
     }
 
     render() {
@@ -379,7 +350,9 @@ class Auth extends React.Component {
     }
 
     static isLogIn() {
+        console.log(this.state.logged_user !== "");
         return this.state.logged_user !== "";
+
     }
 
     static getUrlImg() {
@@ -403,7 +376,8 @@ class Auth extends React.Component {
             this.setState({message: data.message});
         }
         else {
-            this.setState({logged_user: this.state.login, url_img: data.data.url_img})
+            this.setState({logged_user: this.state.login, url_img: data.data.url_img});
+            Chat.rerender();
         }
     }
 
@@ -433,7 +407,6 @@ class Auth extends React.Component {
             headers: {'Content-Type':'multipart/form-data'},
             body: formData }).then(
         (response) => {
-            // console.log(response);
         }
     ).catch( () => {} );
     }
@@ -442,7 +415,6 @@ class Auth extends React.Component {
      onFormSubmit(e){
         e.preventDefault() ;// Stop form submit
         this.fileUpload(this.state.file).then((response)=>{
-        // console.log(response.data);
     })
   }
   onChange(e) {
@@ -462,7 +434,7 @@ class Auth extends React.Component {
   }
 
 render() {
-    if (this.state.logged_user === "") //not logged
+    if (!Auth.isLogIn()) //not logged
     {
         return (
             <div id="login-box">
@@ -493,30 +465,38 @@ render() {
 }
 }
 
-// class Chat extends React.Component {
-//     render() {
-//         if (Auth.isLogIn())
-//         {
-//             conso
-//             return <div>
-//                 <Contacts />
-//                 <MessagesList />
-//             </div>
-//         }
-//         else
-//         {
-//             return <div></div>
-//         }
-//     }
-//
-// }
 
+class Chat extends React.Component {
+        constructor(props, context) {
+        super(props, context);
+        Chat.rerender = Chat.rerender.bind(this);
+    }
+
+    static rerender() {
+            this.forceUpdate();
+    }
+
+    render() {
+        if (Auth.isLogIn())
+        {
+            return <div id="frame">
+                <Contacts />
+                <MessagesList />
+            </div>
+        }
+        else
+        {
+            console.log("not login");
+            return null;
+        }
+    }
+
+}
 
 ReactDOM.render(
-    <div id="frame">
+    <div id="log">
         <Auth />
-        <Contacts/>
-        <MessagesList/>
+        <Chat/>
     </div>,
     document.getElementById('chat')
 );
