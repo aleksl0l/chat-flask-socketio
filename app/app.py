@@ -26,15 +26,23 @@ def index():
 
 @app.route('/image', methods=['POST'])
 def upload_file():
-    if request.method == 'POST':
+    MAX_SIZE_OF_IMAGE = 512 * 1024
+    if request.method == 'POST' and 'login' in request.args:
         # check if the post request has the file part
         if 'file' not in request.files:
             return jsonify({'message': 'No file found', 'data': None, 'status': 'error'})
         file = request.files['file']
+        file.seek(0, os.SEEK_END)
+        file_length = file.tell()
+        if file_length > MAX_SIZE_OF_IMAGE:
+            return jsonify({'message': 'File is too large', 'data': None, 'status': 'error'})
+        file.seek(0)
+
         if file.filename == '':
             return jsonify({'message': 'No file found', 'data': None, 'status': 'error'})
         filename = file.filename
         filename = str(uuid.uuid4()) + filename[filename.rfind('.'):]
+
 
         file.save(os.path.join(app.root_path, 'static', 'images', filename))
 
