@@ -438,8 +438,8 @@ render() {
     {
         return (
             <div id="login-box">
-                <input className="input-login" type="text" placeholder="login" value={this.state.login} onChange={this.update_login}/>
-                <input className="input-login" type="password" placeholder="password" value={this.state.password} onChange={this.update_password}/>
+                <input className="input-login" type="text" placeholder="Login" value={this.state.login} onChange={this.update_login}/>
+                <input className="input-login" type="password" placeholder="Password" value={this.state.password} onChange={this.update_password}/>
                 <a className="btn" onClick={this.handleSignIn}>
                     Sign in
                 </a>
