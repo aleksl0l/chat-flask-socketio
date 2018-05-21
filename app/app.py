@@ -66,14 +66,14 @@ def signup():
                                'date': datetime.datetime.utcnow()})
         return jsonify({'message': None, 'data': None, 'status': 'success'})
     except Exception as e:
-        print(e)
+        # print(e)
         return jsonify({'message': 'Unexpected error', 'data': None, 'status': 'error'})
 
 
 @socketio.on('signup', namespace='/chat')
 def chat_signup(data):
     data = data['data']
-    print(data['login'], len(data['login']))
+    # print(data['login'], len(data['login']))
     if len(data['login']) < 5:
         emit('signup_status', {'message': 'Minimum length of login is 5', 'data': None, 'status': 'error'})
         return
@@ -112,7 +112,7 @@ def chat_connect(data):
                             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=10)},
                            app.config.get('SECRET_KEY'))
         session['login'] = user['login']
-        print(user['login'])
+        # print(user['login'])
         join_room(user['login'])
         mongo.db.users.update_one({'login': user['login']}, {'$set': {'online': True}})
         url_img = user['url_img'] if user['url_img'] else os.path.join(request.url_root, 'images', 'def.jpeg')
@@ -135,11 +135,14 @@ def chat_disconnect():
 
 @socketio.on('get_available_users', namespace='/chat')
 def get_available_users():
+    print("l")
     users = mongo.db.users.find({'online': True})
     if 'login' in session:
+        print("la")
         mongo.db.users.update_one({'login': session['login']}, {'$set': {'online': True}})
     users_list = []
     for u in users:
+        print(request.url_root)
         url_img = u['url_img'] if u['url_img'] else os.path.join(request.url_root, 'images', 'def.jpeg')
         users_list.append({'login': u['login'], 'url_img': url_img})
     emit('users', {'message': None, 'data': {'users': users_list}, 'status': 'success'})
@@ -157,6 +160,7 @@ def get_history(data):
             conversation = mongo.db.convertations.find_one({'members': [login, with_login]})
         if not conversation:
             emit('login', {'message': 'There is no message', 'data': None, 'status': 'error'})
+            return
         messages = mongo.db.messages.find({'id_conv': conversation['_id']})
         ret = []
         for m in messages:
@@ -173,14 +177,13 @@ def get_history(data):
 
 @socketio.on('message', namespace='/chat')
 def chat_message(message):
-    print(message)
+    # print(message)
     if 'login_to' == " ":
         return
     if 'login' in session:
         login = session['login']
         login_to = message['to']
         mongo.db.users.update_one({'login': login}, {'$set': {'online': True}})
-        # if there is conversation between
 
         if login != login_to:
             conversation = mongo.db.convertations.find_one({'members': {'$all': [login, login_to]}})
@@ -189,7 +192,7 @@ def chat_message(message):
         if not conversation:
             insert = mongo.db.convertations.insert_one({'members': [login, login_to]})
             conversation = mongo.db.convertations.find_one(insert.inserted_id)
-        mongo.db.messages.insert_one({'id_conv': conversation['_id'], 'text': message['message'].encode('latin-1').decode('utf-8'), 'to': login_to})
+        mongo.db.messages.insert_one({'id_conv': conversation['_id'], 'text': message['message'], 'to': login_to})
     else:
         return
     if login != login_to:
@@ -198,7 +201,7 @@ def chat_message(message):
                  'message': None,
                  'data':
                      {
-                         'message': message['message'].encode('latin-1').decode('utf-8'),
+                         'message': message['message'],
                          'from': session['login'],
                          'id': str(uuid.uuid4())
                      },
@@ -209,7 +212,7 @@ def chat_message(message):
              'message': None,
              'data':
                  {
-                     'message': message['message'].encode('latin-1').decode('utf-8'),
+                     'message': message['message'],
                      'to': message['to'],
                      'id': str(uuid.uuid4())
                  },

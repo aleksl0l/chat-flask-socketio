@@ -279,7 +279,7 @@ class MessagesList extends  React.Component {
         return <div className="content">
             <div className="contact-profile">
                 <img src={this.state.current_user_img} alt="" />
-                <p>Chat with {this.state.current_user}</p>
+                <p>{this.state.current_user}</p>
             </div>
             <div className="messages">
                 <ul>
