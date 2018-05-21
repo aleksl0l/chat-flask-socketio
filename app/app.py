@@ -14,7 +14,7 @@ async_mode = None
 app = Flask(__name__, static_url_path='')
 app.config.from_pyfile('config.py')
 mongo = PyMongo(app)
-socketio = SocketIO(app, async_mode=async_mode)
+socketio = SocketIO(app, async_mode='eventlet')
 
 with app.app_context():
     mongo.db.users.update_many({}, {'$set': {'online': False}})
@@ -112,7 +112,6 @@ def chat_connect(data):
                             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=10)},
                            app.config.get('SECRET_KEY'))
         session['login'] = user['login']
-        # print(user['login'])
         join_room(user['login'])
         mongo.db.users.update_one({'login': user['login']}, {'$set': {'online': True}})
         url_img = user['url_img'] if user['url_img'] else os.path.join(request.url_root, 'images', 'def.jpeg')
@@ -124,6 +123,7 @@ def chat_connect(data):
                        'status': 'success'})
     else:
         emit('login', {'message': 'Password or user is invalid', 'data': None, 'status': 'error'})
+        return
 
 
 @socketio.on('disconnect', namespace='/chat')
@@ -135,14 +135,11 @@ def chat_disconnect():
 
 @socketio.on('get_available_users', namespace='/chat')
 def get_available_users():
-    print("l")
     users = mongo.db.users.find({'online': True})
     if 'login' in session:
-        print("la")
         mongo.db.users.update_one({'login': session['login']}, {'$set': {'online': True}})
     users_list = []
     for u in users:
-        print(request.url_root)
         url_img = u['url_img'] if u['url_img'] else os.path.join(request.url_root, 'images', 'def.jpeg')
         users_list.append({'login': u['login'], 'url_img': url_img})
     emit('users', {'message': None, 'data': {'users': users_list}, 'status': 'success'})
